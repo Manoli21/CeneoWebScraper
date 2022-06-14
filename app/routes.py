@@ -1,29 +1,21 @@
 from app import app
 from flask import render_template, redirect, url_for, request
-import requests
-import json
-from bs4 import BeautifulSoup
 import os
-import pandas as pd
-import numpy as np
-from matplotlib import pyplot as plt
 from app.models.product import Product
-from app.utils import get_item
-
-
 
 @app.route('/')
-def index(name="Hello World"):
-    return render_template("index.html.jinja", text=name)
+def index():
+    return render_template("index.html.jinja")
 
-@app.route('/extract/', methods=["POST" , "GET"])
+@app.route('/extract', methods=["POST", "GET"])
 def extract():
     if request.method == "POST":
         product_id = request.form.get("product_id")
         product = Product(product_id)
-        product.extract_product().process_stats
-        product.save_stats()
+        product.extract_product().process_stats().draw_charts()
+        # product.save_stats()
         product.save_opinions()
+        return redirect(url_for("product", product_id=product_id))
     else:
         return render_template("extract.html.jinja")
 
@@ -39,5 +31,7 @@ def author():
 @app.route('/product/<product_id>')
 def product(product_id):
     product = Product(product_id)
-    
+    product.read_from_json()
+    opinions = product.opinions_do_df()
+    stats = product.stats_to_dict()
     return render_template("product.html.jinja", stats=stats, product_id=product_id, opinions=opinions)
