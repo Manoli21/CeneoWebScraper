@@ -21,30 +21,9 @@ def extract():
     if request.method == "POST":
         product_id = request.form.get("product_id")
         product = Product(product_id)
-        product.extract_product()
-
-        url = f"https://www.ceneo.pl/{product_id}#tab=reviews"
-        all_opinions = []
-        while(url):
-            response = requests.get(url)
-            page = BeautifulSoup(response.text, 'html.parser')
-            opinions = page.select("div.js_product-review")
-            for opinion in opinions:
-                single_opinion = {
-                    key:get_item(opinion, *value)
-                        for key, value in selectors.items()
-                }
-                single_opinion["opinion_id"] = opinion["data-entry-id"]
-                all_opinions.append(single_opinion)
-            try:    
-                url = "https://www.ceneo.pl"+get_item(page,"a.pagination__next","href")
-            except TypeError:
-                url = None
-            if not os.path.exists("app/opinions"):
-                os.makedirs("app/opinions")
-            with open(f"app/opinions/{product_id}.json", "w", encoding="UTF-8") as jf:
-                json.dump(all_opinions, jf, indent=4, ensure_ascii=False)
-        return redirect(url_for("product", product_id=product_id))
+        product.extract_product().process_stats
+        product.save_stats()
+        product.save_opinions()
     else:
         return render_template("extract.html.jinja")
 
@@ -59,26 +38,6 @@ def author():
 
 @app.route('/product/<product_id>')
 def product(product_id):
-    opinions = pd.read_json(f"app/opinions/{product_id}.json")
-    opinions.stars = opinions.stars.map(lambda x: float(x.split("/")[0].replace(",", ".")))
-    recommendation = opinions.recommendation.value_counts(dropna = False).sort_index().reindex(["Nie polecam", "Polecam", None])
-    recommendation.plot.pie(
-        label="", 
-        autopct="%1.1f%%", 
-        colors=["crimson", "forestgreen", "lightskyblue"],
-        labels=["Nie polecam", "Polecam", "Nie mam zdania"]
-    )
-    plt.title("Rekomendacja")
-    plt.savefig(f"app/static/plots/{product_id}_recommendations.png")
-    plt.close()
-
-    stars = opinions.stars.value_counts().sort_index().reindex(list(np.arange(0,5.5,0.5)), fill_value=0)
-    stars.plot.bar()
-    plt.title("Oceny produktu")
-    plt.xlabel("Liczba gwiazdek")
-    plt.ylabel("Liczba opinii")
-    plt.grid(True)
-    plt.xticks(rotation=0)
-    plt.savefig(f"app/static/plots/{product_id}_stars.png")
-    plt.close()
+    product = Product(product_id)
+    
     return render_template("product.html.jinja", stats=stats, product_id=product_id, opinions=opinions)

@@ -16,16 +16,18 @@ class Opinion:
         return self
     
     def __str__(self):
-        pass
+        return f"opinion_id: {self.opinion_id}<br>" + "<br>".join(f"{key}: {str(getattr(self,key))}" for key in self.selectors.keys())
 
     def __repr__(self):
-        pass
+        return f"Opinion(opinion_id={self.opinion_id}, " + ", ".join(f"{key}={str(getattr(self,key))}" for key in self.selectors.keys()) + ")"
+
 
     def to_dict(self):
-        pass
+        return {"opinion_id:self.opinion_id} | {key: getattr(self,key)" for key in self.selectors.keys()}
+
 
     def extract_opinion(self):
-        for key, value in selectors.items()
+        for key, value in selectors.items():
            setattr(self, key:get_item(opinion, *value))
         self.opinion_id = opinion["data-entry-id"]
         return self
